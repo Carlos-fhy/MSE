@@ -1,4 +1,7 @@
 # Root ignores
+# Claude AI settings
+.claude/
+
 # Node dependencies
 backend/node_modules
 frontend/node_modules
