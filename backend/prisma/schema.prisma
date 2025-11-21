@@ -1,0 +1,231 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// 系统表 - 用于组织多个Schema
+model System {
+  id          String   @id @default(uuid())
+  name        String   @unique  // 系统名称（如 "MES系统"）
+  description String?            // 系统描述
+  isAuthEnabled Boolean @default(false)  // 是否启用认证系统
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  schemas              Schema[]      // 多对多关系：一个系统可以使用多个应用配置
+  users                User[]        // 系统关联的用户
+  roles                Role[]        // 系统关联的角色
+  dataRecords          DataRecord[]  // 系统的数据记录
+  workOrders           WorkOrder[]   // 系统的工单
+  workReports          WorkReport[]  // 系统的报工记录
+  qualityChecks        QualityCheck[]  // 系统的质检记录
+  equipment            Equipment[]   // 系统的设备
+  maintenanceRecords   MaintenanceRecord[]  // 系统的维护记录
+  equipmentStatusLogs  EquipmentStatusLog[]  // 系统的设备状态日志
+}
+
+// 低代码核心表 - Schema 配置（应用配置模板）
+model Schema {
+  id          String   @id @default(uuid())
+  name        String   @unique  // Schema 名称（如 "work-order"）
+  entity      String   @unique  // 对应的实体名称（如 "WorkOrder"）
+  fields      String               // JSON 字符串：字段定义数组
+  category    String   @default("custom")  // 分类：mes 或 custom
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  systems     System[] // 多对多关系：一个配置可以被多个系统使用
+}
+
+// 用户表
+model User {
+  id            String   @id @default(uuid())
+  username      String
+  password      String              // bcrypt 加密
+  realName      String              // 真实姓名
+  email         String?             // 邮箱（可选）
+  description   String?             // 备注（如：组长、王工、李工等具体身份）
+  roleId        String
+  role          Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  systemId      String?             // 所属系统（null表示超级管理员）
+  system        System?  @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // 关联关系
+  workOrders    WorkOrder[]
+  workReports   WorkReport[]
+  qualityChecks QualityCheck[]
+  maintenances  MaintenanceRecord[]
+
+  // 复合唯一约束：用户名在同一系统内唯一
+  @@unique([username, systemId])
+}
+
+// 角色表
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  permissions String              // JSON 数组：权限代码列表 ["user:read", "user:create", ...]
+  systemId    String?             // 所属系统（null表示全局角色，如超级管理员）
+  system      System?  @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  isBuiltIn   Boolean  @default(false)  // 是否是内置角色（如admin、user）
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users       User[]
+}
+
+// 工单表
+model WorkOrder {
+  id              String   @id @default(uuid())
+  orderNo         String
+  productName     String
+  quantity        Int
+  status          String   @default("pending")  // pending, in_progress, completed
+  priority        String   @default("normal")   // low, normal, high, urgent
+  planStartDate   DateTime?
+  planEndDate     DateTime?
+  actualStartDate DateTime?
+  actualEndDate   DateTime?
+  equipmentId     String?
+  equipment       Equipment? @relation(fields: [equipmentId], references: [id])
+  createdBy       String
+  creator         User     @relation(fields: [createdBy], references: [id])
+  systemId        String              // 所属系统ID（用于多租户隔离）
+  system          System   @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // 关联关系
+  workReports     WorkReport[]
+  qualityChecks   QualityCheck[]
+
+  @@unique([orderNo, systemId])  // 按系统隔离的唯一约束
+  @@index([systemId])
+}
+
+// 报工记录表
+model WorkReport {
+  id          String   @id @default(uuid())
+  workOrderId String
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  workHours   Float              // 工作时长（小时）
+  quantity    Int                // 完成数量
+  reportDate  DateTime
+  remarks     String?
+  systemId    String              // 所属系统ID（用于多租户隔离）
+  system      System   @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([systemId])
+}
+
+// 质检记录表
+model QualityCheck {
+  id           String   @id @default(uuid())
+  workOrderId  String
+  workOrder    WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  inspectorId  String
+  inspector    User     @relation(fields: [inspectorId], references: [id])
+  result       String              // pass, fail
+  totalQty     Int                 // 检验数量
+  passQty      Int                 // 合格数量
+  failQty      Int                 // 不良数量
+  checkDate    DateTime
+  remarks      String?
+  systemId     String              // 所属系统ID（用于多租户隔离）
+  system       System   @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([systemId])
+}
+
+// 设备表
+model Equipment {
+  id              String   @id @default(uuid())
+  equipmentNo     String   @unique
+  equipmentName   String
+  category        String?            // 设备类别
+  model           String?            // 型号
+  manufacturer    String?            // 制造商
+  location        String?            // 所在位置
+  purchaseDate    DateTime?          // 采购日期
+  warrantyPeriod  Int?               // 保修期（月）
+  status          String   @default("idle")  // idle, running, maintenance, fault
+  systemId        String              // 所属系统ID（用于多租户隔离）
+  system          System   @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // 关联关系
+  workOrders      WorkOrder[]
+  maintenances    MaintenanceRecord[]
+  statusLogs      EquipmentStatusLog[]
+
+  @@index([systemId])
+}
+
+// 设备维护记录表
+model MaintenanceRecord {
+  id            String   @id @default(uuid())
+  equipmentId   String
+  equipment     Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  type          String              // planned, repair
+  description   String
+  startTime     DateTime
+  endTime       DateTime?
+  technicianId  String
+  technician    User     @relation(fields: [technicianId], references: [id])
+  cost          Float?
+  result        String?
+  systemId      String              // 所属系统ID（用于多租户隔离）
+  system        System   @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([systemId])
+}
+
+// 设备状态日志表
+model EquipmentStatusLog {
+  id          String   @id @default(uuid())
+  equipmentId String
+  equipment   Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  oldStatus   String?
+  newStatus   String
+  systemId    String              // 所属系统ID（用于多租户隔离）
+  system      System   @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  changedAt   DateTime @default(now())
+
+  @@index([systemId])
+}
+
+// 通用数据记录表 - 用于存储低代码平台动态创建的实体数据
+model DataRecord {
+  id          String   @id @default(uuid())
+  entity      String              // 实体名称（如 "Employee"）
+  data        String              // JSON 字符串：实际数据
+  systemId    String              // 所属系统ID（用于多租户隔离）
+  system      System   @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  createdBy   String?             // 创建者ID
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([entity])
+  @@index([systemId])
+  @@index([createdBy])
+}

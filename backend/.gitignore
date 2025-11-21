@@ -1,0 +1,10 @@
+node_modules
+# Keep environment variables out of version control
+.env
+
+/src/generated/prisma
+
+# 忽略本地开发数据库及备份
+prisma/dev.db
+prisma/dev.db.backup.*
+prisma/*.db

@@ -1,0 +1,38 @@
+# Root ignores
+# Node dependencies
+backend/node_modules
+frontend/node_modules
+**/node_modules
+
+# Build outputs
+frontend/dist
+
+# Windows reserved device names
+**/nul
+nul
+
+# Environment variables
+.env
+backend/.env
+frontend/.env
+
+# SQLite databases & backups
+backend/prisma/*.db
+backend/prisma/dev.db*
+
+# Logs
+*.log
+backend/logs
+frontend/logs
+
+# Editor configs
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+
+# Excel temporary files
+frontend/*.xlsx
+
+# Prisma generated (if any)
+backend/src/generated/prisma

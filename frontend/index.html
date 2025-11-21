@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>frontend</title>
+    <script>
+      // Guard against duplicate custom element registrations in dev
+      (function () {
+        try {
+          var ce = window.customElements;
+          if (!ce || ce.__defineOncePatched) return;
+          var origDefine = ce.define.bind(ce);
+          var origGet = ce.get.bind(ce);
+          Object.defineProperty(ce, "__defineOncePatched", { value: true });
+          ce.define = function (name, ctor, options) {
+            if (origGet(name)) return; // Element already defined; ignore
+            try {
+              return origDefine(name, ctor, options);
+            } catch (e) {
+              if (e && e.message && /already been defined/i.test(String(e.message))) return;
+              throw e;
+            }
+          };
+        } catch (_) {
+          // no-op: never block app startup due to guard issues
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
