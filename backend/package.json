@@ -2,6 +2,10 @@
   "name": "backend",
   "version": "1.0.0",
   "main": "index.js",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
   "scripts": {
     "dev": "nodemon --watch src --exec tsx src/index.ts",
     "dev:direct": "tsx src/index.ts",

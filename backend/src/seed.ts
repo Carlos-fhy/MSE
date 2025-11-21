@@ -545,22 +545,22 @@ async function main() {
   const workReportSchema = await prisma.schema.upsert({
     where: { name: "work-report" },
     update: {
+      entity: "WorkReport",  // 更新为固定表实体
       category: "mes",
       systems: {
         connect: { id: mesSystem.id },
       },
       fields: JSON.stringify([
         {
-          key: "workOrderNo",
+          key: "workOrderId",
           label: "关联工单",
-          type: "text",
+          type: "relation",
           required: true,
-        },
-        {
-          key: "workerName",
-          label: "报工员工",
-          type: "text",
-          required: true,
+          relationConfig: {
+            entity: "WorkOrder",
+            labelFormat: "{orderNo} - {productName}",
+            valueField: "id",
+          },
         },
         {
           key: "workHours",
@@ -569,7 +569,7 @@ async function main() {
           required: true,
         },
         {
-          key: "completedQty",
+          key: "quantity",
           label: "完成数量",
           type: "number",
           required: true,
@@ -581,7 +581,7 @@ async function main() {
           required: true,
         },
         {
-          key: "remark",
+          key: "remarks",
           label: "备注",
           type: "textarea",
           required: false,
@@ -590,23 +590,22 @@ async function main() {
     },
     create: {
       name: "work-report",
-      entity: "WorkReportData",
+      entity: "WorkReport",
       category: "mes",
       systems: {
         connect: { id: mesSystem.id },
       },
       fields: JSON.stringify([
         {
-          key: "workOrderNo",
+          key: "workOrderId",
           label: "关联工单",
-          type: "text",
+          type: "relation",
           required: true,
-        },
-        {
-          key: "workerName",
-          label: "报工员工",
-          type: "text",
-          required: true,
+          relationConfig: {
+            entity: "WorkOrder",
+            labelFormat: "{orderNo} - {productName}",
+            valueField: "id",
+          },
         },
         {
           key: "workHours",
@@ -615,7 +614,7 @@ async function main() {
           required: true,
         },
         {
-          key: "completedQty",
+          key: "quantity",
           label: "完成数量",
           type: "number",
           required: true,
@@ -627,7 +626,7 @@ async function main() {
           required: true,
         },
         {
-          key: "remark",
+          key: "remarks",
           label: "备注",
           type: "textarea",
           required: false,
@@ -642,22 +641,22 @@ async function main() {
   const qualityCheckSchema = await prisma.schema.upsert({
     where: { name: "quality-check" },
     update: {
+      entity: "QualityCheck",  // 更新为固定表实体
       category: "mes",
       systems: {
         connect: { id: mesSystem.id },
       },
       fields: JSON.stringify([
         {
-          key: "workOrderNo",
+          key: "workOrderId",
           label: "关联工单",
-          type: "text",
+          type: "relation",
           required: true,
-        },
-        {
-          key: "inspector",
-          label: "质检员",
-          type: "text",
-          required: true,
+          relationConfig: {
+            entity: "WorkOrder",
+            labelFormat: "{orderNo} - {productName}",
+            valueField: "id",
+          },
         },
         {
           key: "result",
@@ -694,7 +693,7 @@ async function main() {
           required: true,
         },
         {
-          key: "remark",
+          key: "remarks",
           label: "备注",
           type: "textarea",
           required: false,
@@ -703,23 +702,22 @@ async function main() {
     },
     create: {
       name: "quality-check",
-      entity: "QualityCheckData",
+      entity: "QualityCheck",
       category: "mes",
       systems: {
         connect: { id: mesSystem.id },
       },
       fields: JSON.stringify([
         {
-          key: "workOrderNo",
+          key: "workOrderId",
           label: "关联工单",
-          type: "text",
+          type: "relation",
           required: true,
-        },
-        {
-          key: "inspector",
-          label: "质检员",
-          type: "text",
-          required: true,
+          relationConfig: {
+            entity: "WorkOrder",
+            labelFormat: "{orderNo} - {productName}",
+            valueField: "id",
+          },
         },
         {
           key: "result",
@@ -756,7 +754,7 @@ async function main() {
           required: true,
         },
         {
-          key: "remark",
+          key: "remarks",
           label: "备注",
           type: "textarea",
           required: false,

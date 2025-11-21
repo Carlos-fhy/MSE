@@ -23,6 +23,44 @@ const USER_ID_FIELDS: Record<string, string> = {
   maintenanceRecord: "technicianId",
 };
 
+// 关系字段映射：外键字段 -> 关系字段名
+const RELATION_FIELDS: Record<string, Record<string, string>> = {
+  workReport: {
+    workOrderId: "workOrder",
+    userId: "user",
+    systemId: "system",
+  },
+  qualityCheck: {
+    workOrderId: "workOrder",
+    inspectorId: "inspector",
+    systemId: "system",
+  },
+  workOrder: {
+    equipmentId: "equipment",
+    createdBy: "creator",
+    systemId: "system",
+  },
+  maintenanceRecord: {
+    equipmentId: "equipment",
+    technicianId: "technician",
+    systemId: "system",
+  },
+  equipmentStatusLog: {
+    equipmentId: "equipment",
+    systemId: "system",
+  },
+  equipment: {
+    systemId: "system",
+  },
+  user: {
+    roleId: "role",
+    systemId: "system",
+  },
+  role: {
+    systemId: "system",
+  },
+};
+
 // 检查是否是预定义的 Prisma 模型
 function isPrismaModel(entity: string): boolean {
   const modelName = entity.charAt(0).toLowerCase() + entity.slice(1);
@@ -84,6 +122,28 @@ export const getAll = async (req: Request, res: Response) => {
         queryOptions.orderBy = { [sortBy as string]: sortOrder };
       } else {
         queryOptions.orderBy = { createdAt: "desc" };
+      }
+
+      // 添加关联查询：WorkReport 和 QualityCheck 需要include workOrder
+      const modelName = entity.charAt(0).toLowerCase() + entity.slice(1);
+      if (modelName === "workReport") {
+        queryOptions.include = {
+          workOrder: {
+            select: { id: true, orderNo: true, productName: true },
+          },
+          user: {
+            select: { id: true, realName: true },
+          },
+        };
+      } else if (modelName === "qualityCheck") {
+        queryOptions.include = {
+          workOrder: {
+            select: { id: true, orderNo: true, productName: true },
+          },
+          inspector: {
+            select: { id: true, realName: true },
+          },
+        };
       }
 
       const [data, total] = await Promise.all([
@@ -273,12 +333,22 @@ export const create = async (req: Request, res: Response) => {
       }
 
       // 自动填充systemId（必需字段）
-      if (req.user?.systemId) {
+      // 优先使用请求体中的systemId，否则使用用户的systemId
+      if (!processedData.systemId) {
+        if (!req.user?.systemId) {
+          return res.status(400).json({
+            success: false,
+            error: "用户未关联到任何系统，且未在请求中指定systemId",
+          });
+        }
         processedData.systemId = req.user.systemId;
       }
 
+      // 处理关系字段：将外键转换为 Prisma 关系语法
+      const finalData = processRelationFields(processedData, modelName);
+
       const data = await model.create({
-        data: processedData,
+        data: finalData,
       });
 
       return res.status(201).json({
@@ -288,12 +358,23 @@ export const create = async (req: Request, res: Response) => {
     }
 
     // 动态实体，存储到 DataRecord，并记录创建者和系统ID
+    // 获取 systemId（优先使用请求体中的，否则使用用户的）
+    const systemId = body.systemId || req.user?.systemId;
+    if (!systemId) {
+      return res.status(400).json({
+        success: false,
+        error: "用户未关联到任何系统，且未在请求中指定systemId",
+      });
+    }
+
     const record = await prisma.dataRecord.create({
       data: {
         entity,
         data: JSON.stringify(body),
-        systemId: req.user?.systemId || "", // 记录所属系统ID（必需字段）
-        createdBy: req.user?.id, // 记录创建者
+        system: {
+          connect: { id: systemId }, // 使用关系语法
+        },
+        createdBy: req.user?.id, // createdBy 是普通字符串字段，直接传递
       },
     });
 
@@ -357,9 +438,13 @@ export const update = async (req: Request, res: Response) => {
       const { id: _, ...updateData } = body;
       const processedData = processDateFields(updateData);
 
+      // 获取模型名称并处理关系字段
+      const modelName = entity.charAt(0).toLowerCase() + entity.slice(1);
+      const finalData = processRelationFields(processedData, modelName);
+
       const data = await model.update({
         where: { id },
-        data: processedData,
+        data: finalData,
       });
 
       return res.json({
@@ -544,6 +629,29 @@ function processDateFields(data: any): any {
       /^\d{4}-\d{2}-\d{2}/.test(value)
     ) {
       processed[key] = new Date(value);
+    }
+  }
+
+  return processed;
+}
+
+// 处理关系字段：将外键字段转换为 Prisma 关系语法
+function processRelationFields(data: any, modelName: string): any {
+  const processed = { ...data };
+  const relations = RELATION_FIELDS[modelName];
+
+  if (!relations) {
+    return processed;
+  }
+
+  for (const [foreignKey, relationName] of Object.entries(relations)) {
+    if (processed[foreignKey]) {
+      // 将外键转换为关系语法
+      processed[relationName] = {
+        connect: { id: processed[foreignKey] },
+      };
+      // 删除原始外键字段
+      delete processed[foreignKey];
     }
   }
 

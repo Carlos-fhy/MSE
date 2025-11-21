@@ -83,6 +83,8 @@ function App() {
       }
 
       setCurrentSystem(freshSystem);
+      // 保存当前系统到 localStorage，用于API请求自动添加systemId
+      localStorage.setItem('currentSystem', JSON.stringify(freshSystem));
       // 默认进入生产看板
       setCurrentPage("dashboard");
       setRuntimeSchema("");
@@ -119,7 +121,7 @@ function App() {
     }
   };
 
-  // 退出系统，返回系统列表，同时自动登出
+  // 退出系统,返回系统列表，同时自动登出
   const handleExitSystem = async () => {
     // 如果用户已登录，先执行登出操作
     if (authService.isAuthenticated()) {
@@ -133,6 +135,7 @@ function App() {
 
     // 清除系统状态，返回系统列表
     setCurrentSystem(null);
+    localStorage.removeItem('currentSystem');  // 清除 localStorage 中的系统信息
     setRuntimeSchema("");
     setCurrentPage("runtime");
   };
@@ -189,6 +192,7 @@ function App() {
       updatedAt: "",
       isAuthEnabled: false,
     });
+    localStorage.removeItem('currentSystem');  // 清除系统信息，配置页面不属于任何系统
     setCurrentPage("config");
   };
 
@@ -390,6 +394,7 @@ function App() {
           onDelete={() => {
             // 系统被删除后，返回系统列表页
             setCurrentSystem(null);
+            localStorage.removeItem('currentSystem');  // 清除 localStorage 中的系统信息
             setCurrentPage("runtime");
             // 清除登录状态
             authService.logout().catch(() => {});

@@ -259,7 +259,9 @@ async function main() {
           hireDate: randomDate(365 * 5).toISOString().split("T")[0],
           remark: "",
         }),
-        systemId: mesSystem.id,
+        system: {
+          connect: { id: mesSystem.id },  // 使用关系语法
+        },
         createdBy: operatorUser.id,
       },
     });

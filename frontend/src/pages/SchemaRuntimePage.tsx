@@ -210,16 +210,27 @@ export default function SchemaRuntimePage({ schemaName }: SchemaRuntimePageProps
   };
 
   // 导出数据
-  const handleExport = () => {
-    if (!schema || dataList.length === 0) {
-      message.warning("没有数据可导出");
+  const handleExport = async () => {
+    if (!schema) {
+      message.warning("Schema 未加载");
       return;
     }
+
     try {
-      exportToExcel(dataList, schema.fields, schema.name);
-      message.success("导出成功");
+      message.loading({ content: "正在导出数据...", key: "export" });
+
+      // 获取所有数据（不分页）
+      const result = await dataService.getAll(schema.entity, 1, 999999);
+
+      if (!result.data || result.data.length === 0) {
+        message.warning({ content: "没有数据可导出", key: "export" });
+        return;
+      }
+
+      exportToExcel(result.data, schema.fields, schema.name);
+      message.success({ content: `成功导出 ${result.data.length} 条数据`, key: "export" });
     } catch (error: any) {
-      message.error("导出失败: " + error.message);
+      message.error({ content: "导出失败: " + error.message, key: "export" });
     }
   };
 
@@ -367,7 +378,6 @@ export default function SchemaRuntimePage({ schemaName }: SchemaRuntimePageProps
           <Button
             icon={<DownloadOutlined />}
             onClick={handleExport}
-            disabled={dataList.length === 0}
           >
             导出数据
           </Button>

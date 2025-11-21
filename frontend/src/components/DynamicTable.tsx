@@ -25,12 +25,19 @@ export default function DynamicTable({
   onDelete,
   pagination,
 }: DynamicTableProps) {
+  // 格式化关联字段显示文本
+  const formatRelationLabel = (data: any, format: string): string => {
+    return format.replace(/\{(\w+)\}/g, (match, key) => {
+      return data[key] || match;
+    });
+  };
+
   // 根据字段配置生成表格列
   const columns = fields.map((field) => ({
     title: field.label,
     dataIndex: field.key,
     key: field.key,
-    render: (value: any) => {
+    render: (value: any, record: any) => {
       // 格式化不同类型
       if (value === null || value === undefined) {
         return "-";
@@ -47,6 +54,21 @@ export default function DynamicTable({
 
         case "number":
           return typeof value === "number" ? value.toLocaleString() : value;
+
+        case "relation":
+          // 关联字段：从关联对象中提取数据
+          if (field.relationConfig) {
+            // 尝试从记录中找到关联对象
+            // 例如：workOrderId -> workOrder
+            const relationKey = field.key.replace(/Id$/, "");
+            const relationObj = record[relationKey];
+
+            if (relationObj && typeof relationObj === "object") {
+              return formatRelationLabel(relationObj, field.relationConfig.labelFormat);
+            }
+          }
+          // 如果没有找到关联对象，显示ID
+          return value;
 
         default:
           return value;

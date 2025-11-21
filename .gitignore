@@ -20,8 +20,11 @@ backend/.env
 frontend/.env
 
 # SQLite databases & backups
-backend/prisma/*.db
-backend/prisma/dev.db*
+# 注释掉以下行，允许 dev.db 被包含在发布包中
+# backend/prisma/*.db
+backend/prisma/*.db-journal
+backend/prisma/*.db-wal
+backend/prisma/*backup*
 
 # Logs
 *.log

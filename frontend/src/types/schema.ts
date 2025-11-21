@@ -2,10 +2,15 @@
 export interface SchemaField {
   key: string;
   label: string;
-  type: "text" | "number" | "date" | "select" | "textarea";
+  type: "text" | "number" | "date" | "select" | "textarea" | "relation";
   required?: boolean;
   options?: Array<{ label: string; value: string | number }>;
   defaultValue?: any;
+  relationConfig?: {
+    entity: string;           // 关联的实体名称
+    labelFormat: string;      // 显示格式，如 "{orderNo} - {productName}"
+    valueField: string;       // 值字段，通常是 "id"
+  };
 }
 
 // System interface
